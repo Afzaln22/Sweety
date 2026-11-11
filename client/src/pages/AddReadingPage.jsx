@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
-import { ArrowLeft, AlertCircle, Info, Check } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Info } from 'lucide-react';
 
 const SLOTS = [
   'Morning (fasting)',
@@ -9,9 +9,19 @@ const SLOTS = [
   'After dinner'
 ];
 
+function getTodayMaxDate() {
+  const now = new Date();
+  const local = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0')
+  ].join('-');
+  const utc = now.toISOString().slice(0, 10);
+  return local > utc ? local : utc;
+}
+
 export default function AddReadingPage({ onBack, onSuccess, initialDate, initialSlot }) {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const [date, setDate] = useState(initialDate || todayStr);
+  const [date, setDate] = useState(initialDate || getTodayMaxDate());
   const [slot, setSlot] = useState(initialSlot || 'Morning (fasting)');
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
@@ -21,19 +31,28 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
     e.preventDefault();
     setError('');
 
-    // Frontend validations matching exact requirements
+    // Rule 1: Value is required
     if (value === undefined || value === null || String(value).trim() === '') {
       setError('Please enter a glucose value.');
       return;
     }
 
+    // Rule 2: Value must be a whole number between 40 and 600
     const num = Number(value);
     if (!Number.isInteger(num) || isNaN(num) || num < 40 || num > 600) {
       setError('Value must be between 40 and 600 mg/dl.');
       return;
     }
 
-    if (date > todayStr) {
+    // Date is required
+    if (!date) {
+      setError('Reading date is required.');
+      return;
+    }
+
+    // Rule 5: Date cannot be in the future
+    const maxAllowedDate = getTodayMaxDate();
+    if (date > maxAllowedDate) {
       setError('Date cannot be in the future.');
       return;
     }
@@ -75,7 +94,6 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
             Keep your glucose readings in one calm, private place. Track your routine and notice patterns over time.
           </p>
 
-          {/* Quote Card matching Figma */}
           <div className="bg-navy-card/80 border border-slate-700/50 rounded-2xl p-6 max-w-sm shadow-sm">
             <p className="text-slate-200 text-sm font-medium leading-relaxed mb-4">
               “Consistency makes your health history more useful.”
@@ -106,14 +124,14 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
 
           {/* Error Message banner with exact requirement styling */}
           {error && (
-            <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start space-x-3">
+            <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start space-x-3 shadow-sm">
               <AlertCircle className="w-5 h-5 shrink-0 text-rose-500 mt-0.5" />
-              <div className="font-medium">{error}</div>
+              <div className="font-semibold text-rose-800">{error}</div>
             </div>
           )}
 
           <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form noValidate onSubmit={handleSubmit} className="space-y-6">
               {/* Date Input */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
@@ -121,8 +139,6 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
                 </label>
                 <input
                   type="date"
-                  max={todayStr}
-                  required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
@@ -169,11 +185,7 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
                 </label>
                 <div className="relative">
                   <input
-                    type="number"
-                    step="1"
-                    min="40"
-                    max="600"
-                    required
+                    type="text"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder="Enter value"
@@ -222,4 +234,3 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
     </div>
   );
 }
-
