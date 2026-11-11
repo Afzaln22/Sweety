@@ -28,3 +28,4 @@ export function authenticateToken(req, res, next) {
 export function generateToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 }
+
