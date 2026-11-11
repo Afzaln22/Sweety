@@ -11,3 +11,4 @@ router.get('/', getReports);
 router.get('/trend', getTrend);
 
 export default router;
+
