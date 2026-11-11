@@ -34,3 +34,4 @@ export default function EmptyState({ onAddClick, title, subtitle }) {
     </div>
   );
 }
+

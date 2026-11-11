@@ -65,3 +65,4 @@ export const api = {
     return request(`/reports/trend${q}`);
   }
 };
+
