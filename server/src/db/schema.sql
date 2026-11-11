@@ -26,3 +26,4 @@ CREATE TABLE IF NOT EXISTS readings (
 
 CREATE INDEX IF NOT EXISTS idx_readings_user_date ON readings (user_id, reading_date);
 CREATE INDEX IF NOT EXISTS idx_readings_user_id ON readings (user_id);
+

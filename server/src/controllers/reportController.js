@@ -238,3 +238,4 @@ export async function getTrend(req, res) {
     });
   }
 }
+
