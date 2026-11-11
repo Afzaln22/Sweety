@@ -94,3 +94,4 @@ describe('Reports Calculation Tests', () => {
     expect(prevMonthEnd).toBe('2026-09-30');
   });
 });
+
