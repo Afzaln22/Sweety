@@ -1,4 +1,4 @@
-# Sweety — Blood Glucose Tracker (PERN Stack)
+# Sweety — Blood Glucose Tracker (PERN Stack)-Here specificaly asked for Postgre SQL so insted of MongoDB,I have used Postgre
 
 A patient-centric blood glucose tracking and reporting web application built with **Node.js, Express, PostgreSQL, and React (Vite + Tailwind CSS)**.
 
