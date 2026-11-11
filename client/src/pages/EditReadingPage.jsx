@@ -9,8 +9,18 @@ const SLOTS = [
   'After dinner'
 ];
 
+function getTodayMaxDate() {
+  const now = new Date();
+  const local = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0')
+  ].join('-');
+  const utc = now.toISOString().slice(0, 10);
+  return local > utc ? local : utc;
+}
+
 export default function EditReadingPage({ reading, onBack, onSuccess }) {
-  const todayStr = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState('');
   const [slot, setSlot] = useState('');
   const [value, setValue] = useState('');
@@ -30,18 +40,28 @@ export default function EditReadingPage({ reading, onBack, onSuccess }) {
     e.preventDefault();
     setError('');
 
+    // Rule 1: Value is required
     if (value === undefined || value === null || String(value).trim() === '') {
       setError('Please enter a glucose value.');
       return;
     }
 
+    // Rule 2: Value must be a whole number between 40 and 600
     const num = Number(value);
     if (!Number.isInteger(num) || isNaN(num) || num < 40 || num > 600) {
       setError('Value must be between 40 and 600 mg/dl.');
       return;
     }
 
-    if (date > todayStr) {
+    // Date is required
+    if (!date) {
+      setError('Reading date is required.');
+      return;
+    }
+
+    // Rule 5: Date cannot be in the future
+    const maxAllowedDate = getTodayMaxDate();
+    if (date > maxAllowedDate) {
       setError('Date cannot be in the future.');
       return;
     }
@@ -112,22 +132,20 @@ export default function EditReadingPage({ reading, onBack, onSuccess }) {
           <p className="text-sm text-slate-500 mb-8">Update the details of this recorded check-in.</p>
 
           {error && (
-            <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start space-x-3">
+            <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start space-x-3 shadow-sm">
               <AlertCircle className="w-5 h-5 shrink-0 text-rose-500 mt-0.5" />
-              <div className="font-medium">{error}</div>
+              <div className="font-semibold text-rose-800">{error}</div>
             </div>
           )}
 
           <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form noValidate onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                   Date
                 </label>
                 <input
                   type="date"
-                  max={todayStr}
-                  required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
@@ -172,11 +190,7 @@ export default function EditReadingPage({ reading, onBack, onSuccess }) {
                 </label>
                 <div className="relative">
                   <input
-                    type="number"
-                    step="1"
-                    min="40"
-                    max="600"
-                    required
+                    type="text"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder="Enter value"
@@ -223,4 +237,3 @@ export default function EditReadingPage({ reading, onBack, onSuccess }) {
     </div>
   );
 }
-
