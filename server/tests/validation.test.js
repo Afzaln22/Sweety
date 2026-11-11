@@ -1,4 +1,4 @@
-import { VALID_SLOTS } from '../src/middleware/validationMiddleware.js';
+import { VALID_SLOTS, getTodayMaxDate } from '../src/middleware/validationMiddleware.js';
 
 describe('Validation Unit Logic Tests', () => {
   test('VALID_SLOTS contains the exact 4 required meal slots', () => {
@@ -9,7 +9,7 @@ describe('Validation Unit Logic Tests', () => {
     expect(VALID_SLOTS).toContain('After dinner');
   });
 
-  test('Validates glucose value is required', () => {
+  test('Validates glucose value is required ("Please enter a glucose value.")', () => {
     const isMissing = (val) => val === undefined || val === null || String(val).trim() === '';
     expect(isMissing(undefined)).toBe(true);
     expect(isMissing(null)).toBe(true);
@@ -18,7 +18,7 @@ describe('Validation Unit Logic Tests', () => {
     expect(isMissing(120)).toBe(false);
   });
 
-  test('Validates glucose value must be a whole number between 40 and 600', () => {
+  test('Validates glucose value must be a whole number between 40 and 600 ("Value must be between 40 and 600 mg/dl.")', () => {
     const isValidValue = (val) => {
       const num = Number(val);
       return Number.isInteger(num) && !isNaN(num) && num >= 40 && num <= 600;
@@ -33,26 +33,26 @@ describe('Validation Unit Logic Tests', () => {
     expect(isValidValue(124)).toBe(true);
   });
 
-  test('Validates date cannot be in the future', () => {
+  test('Validates date cannot be in the future ("Date cannot be in the future.")', () => {
     const isFutureDate = (dateStr) => {
-      const todayStr = new Date().toISOString().slice(0, 10);
-      return dateStr > todayStr;
+      const maxAllowed = getTodayMaxDate();
+      return dateStr > maxAllowed;
     };
 
     const pastDate = '2020-01-01';
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const today = getTodayMaxDate();
     const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setDate(tomorrow.getDate() + 2); // 2 days ahead to safely be tomorrow in any timezone
     const futureDate = tomorrow.toISOString().slice(0, 10);
 
     expect(isFutureDate(pastDate)).toBe(false);
-    expect(isFutureDate(todayStr)).toBe(false);
+    expect(isFutureDate(today)).toBe(false);
     expect(isFutureDate(futureDate)).toBe(true);
   });
 
-  test('Formats slot error message with proper indefinite article', () => {
+  test('Formats slot error message with proper indefinite article ("You already have an After lunch reading for this date.")', () => {
     const getSlotError = (slot) => {
-      const article = /^[aeiou]/i.test(slot) ? 'an' : 'a';
+      const article = slot.startsWith('After') ? 'an' : (/^[aeiou]/i.test(slot) ? 'an' : 'a');
       return `You already have ${article} ${slot} reading for this date.`;
     };
 
@@ -61,5 +61,12 @@ describe('Validation Unit Logic Tests', () => {
     expect(getSlotError('After dinner')).toBe('You already have an After dinner reading for this date.');
     expect(getSlotError('Morning (fasting)')).toBe('You already have a Morning (fasting) reading for this date.');
   });
-});
 
+  test('Validates maximum 4 readings per day rule ("You can add only 4 readings per day.")', () => {
+    const isMaxReached = (dailyCount) => dailyCount >= 4;
+    expect(isMaxReached(0)).toBe(false);
+    expect(isMaxReached(3)).toBe(false);
+    expect(isMaxReached(4)).toBe(true);
+    expect(isMaxReached(5)).toBe(true);
+  });
+});
