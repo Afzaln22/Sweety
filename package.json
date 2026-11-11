@@ -1,0 +1,13 @@
+{
+  "name": "sweety-app",
+  "version": "1.0.0",
+  "description": "Sweety - Blood Glucose Tracker (MERN / PERN with PostgreSQL)",
+  "private": true,
+  "scripts": {
+    "server": "npm --prefix server run dev",
+    "client": "npm --prefix client run dev",
+    "test:server": "npm --prefix server test",
+    "migrate": "npm --prefix server run migrate",
+    "seed": "npm --prefix server run seed"
+  }
+}
