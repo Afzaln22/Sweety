@@ -66,7 +66,7 @@ export async function register(req, res) {
     console.error('Register error:', error);
     return res.status(500).json({
       success: false,
-      error: 'An error occurred while creating your account.'
+      error: error.message || 'An error occurred while creating your account.'
     });
   }
 }
@@ -130,7 +130,7 @@ export async function login(req, res) {
     console.error('Login error:', error);
     return res.status(500).json({
       success: false,
-      error: 'An error occurred while logging in.'
+      error: error.message || 'An error occurred while logging in.'
     });
   }
 }
