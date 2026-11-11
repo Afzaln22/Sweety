@@ -176,3 +176,4 @@ Test output verifies:
 ### Reports & Trends
 - `GET /api/reports?date=YYYY-MM-DD` — Daily, Month-to-date, and Previous month statistics
 - `GET /api/reports/trend?date=YYYY-MM-DD` — 7-day glucose trend data for charts
+
