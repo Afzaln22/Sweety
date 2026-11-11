@@ -21,3 +21,4 @@ router.put('/:id', validateReading, updateReading);
 router.delete('/:id', deleteReading);
 
 export default router;
+
