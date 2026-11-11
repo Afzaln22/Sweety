@@ -8,6 +8,20 @@ export const VALID_SLOTS = [
 ];
 
 /**
+ * Returns today's maximum allowed date across local system time and UTC
+ */
+export function getTodayMaxDate() {
+  const now = new Date();
+  const localDate = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0')
+  ].join('-');
+  const utcDate = now.toISOString().slice(0, 10);
+  return localDate > utcDate ? localDate : utcDate;
+}
+
+/**
  * Validates reading creation or update payload according to specification
  */
 export async function validateReading(req, res, next) {
@@ -45,7 +59,6 @@ export async function validateReading(req, res, next) {
     });
   }
 
-  // 5. Date cannot be in the future
   // Format check: YYYY-MM-DD
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegex.test(reading_date)) {
@@ -55,8 +68,9 @@ export async function validateReading(req, res, next) {
     });
   }
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  if (reading_date > todayStr) {
+  // 5. Date cannot be in the future (timezone-safe check)
+  const maxAllowedDate = getTodayMaxDate();
+  if (reading_date > maxAllowedDate) {
     return res.status(400).json({
       success: false,
       error: 'Date cannot be in the future.'
@@ -72,25 +86,7 @@ export async function validateReading(req, res, next) {
   }
 
   try {
-    // 3. Only one reading per slot per day
-    const duplicateQuery = readingId
-      ? `SELECT id FROM readings WHERE user_id = $1 AND reading_date = $2 AND slot = $3 AND id != $4;`
-      : `SELECT id FROM readings WHERE user_id = $1 AND reading_date = $2 AND slot = $3;`;
-    const duplicateParams = readingId
-      ? [userId, reading_date, slot, readingId]
-      : [userId, reading_date, slot];
-
-    const duplicateRes = await pool.query(duplicateQuery, duplicateParams);
-    if (duplicateRes.rows.length > 0) {
-      const article = /^[aeiou]/i.test(slot) ? 'an' : 'a';
-      return res.status(400).json({
-        success: false,
-        error: `You already have ${article} ${slot} reading for this date.`
-      });
-    }
-
-    // 4. Maximum 4 readings per day
-    // If creating a new reading, check if already 4 exist for that date
+    // 4. Maximum 4 readings per day (checked FIRST so adding a 5th reading shows max 4 error)
     if (!readingId) {
       const countRes = await pool.query(
         `SELECT COUNT(*) FROM readings WHERE user_id = $1 AND reading_date = $2;`,
@@ -110,7 +106,9 @@ export async function validateReading(req, res, next) {
         [readingId, userId]
       );
       if (currentReading.rows.length > 0) {
-        const oldDate = currentReading.rows[0].reading_date.toISOString().slice(0, 10);
+        const oldDate = currentReading.rows[0].reading_date?.toISOString
+          ? currentReading.rows[0].reading_date.toISOString().slice(0, 10)
+          : String(currentReading.rows[0].reading_date).slice(0, 10);
         if (oldDate !== reading_date) {
           const countRes = await pool.query(
             `SELECT COUNT(*) FROM readings WHERE user_id = $1 AND reading_date = $2;`,
@@ -127,6 +125,23 @@ export async function validateReading(req, res, next) {
       }
     }
 
+    // 3. Only one reading per slot per day
+    const duplicateQuery = readingId
+      ? `SELECT id FROM readings WHERE user_id = $1 AND reading_date = $2 AND slot = $3 AND id != $4;`
+      : `SELECT id FROM readings WHERE user_id = $1 AND reading_date = $2 AND slot = $3;`;
+    const duplicateParams = readingId
+      ? [userId, reading_date, slot, readingId]
+      : [userId, reading_date, slot];
+
+    const duplicateRes = await pool.query(duplicateQuery, duplicateParams);
+    if (duplicateRes.rows.length > 0) {
+      const article = slot.startsWith('After') ? 'an' : (/^[aeiou]/i.test(slot) ? 'an' : 'a');
+      return res.status(400).json({
+        success: false,
+        error: `You already have ${article} ${slot} reading for this date.`
+      });
+    }
+
     next();
   } catch (err) {
     console.error('Validation error:', err);
@@ -136,4 +151,3 @@ export async function validateReading(req, res, next) {
     });
   }
 }
-
