@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { ArrowLeft, AlertCircle, Info } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Info, Check } from 'lucide-react';
 
 const SLOTS = [
   'Morning (fasting)',
@@ -26,6 +26,46 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recordedSlots, setRecordedSlots] = useState([]);
+  const [checkingSlots, setCheckingSlots] = useState(false);
+
+  // Check which slots have already been recorded for the selected date
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadRecordedSlots() {
+      if (!date) return;
+      try {
+        setCheckingSlots(true);
+        const res = await api.getReadings({ date_from: date, date_to: date });
+        if (isMounted && res.data) {
+          const recorded = res.data.map((r) => r.slot);
+          setRecordedSlots(recorded);
+
+          // If the currently selected slot is already recorded,
+          // automatically select the next available unrecorded slot
+          if (recorded.includes(slot) || !slot) {
+            const nextAvailable = SLOTS.find((s) => !recorded.includes(s));
+            if (nextAvailable) {
+              setSlot(nextAvailable);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching recorded slots for date:', err);
+      } finally {
+        if (isMounted) setCheckingSlots(false);
+      }
+    }
+
+    loadRecordedSlots();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [date]);
+
+  const allSlotsCompleted = recordedSlots.length >= 4;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,6 +94,19 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
     const maxAllowedDate = getTodayMaxDate();
     if (date > maxAllowedDate) {
       setError('Date cannot be in the future.');
+      return;
+    }
+
+    // Rule 4: Maximum 4 readings per day
+    if (allSlotsCompleted) {
+      setError('You can add only 4 readings per day.');
+      return;
+    }
+
+    // Rule 3: Only one reading per slot per day
+    if (recordedSlots.includes(slot)) {
+      const article = slot.startsWith('After') ? 'an' : 'a';
+      setError(`You already have ${article} ${slot} reading for this date.`);
       return;
     }
 
@@ -130,6 +183,14 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
             </div>
           )}
 
+          {/* Notice when all 4 daily slots are already logged */}
+          {allSlotsCompleted && !error && (
+            <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center space-x-3 shadow-sm">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+              <span>You have completed all 4 check-ins for this date (Maximum 4 readings per day).</span>
+            </div>
+          )}
+
           <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm">
             <form noValidate onSubmit={handleSubmit} className="space-y-6">
               {/* Date Input */}
@@ -145,32 +206,62 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
                 />
               </div>
 
-              {/* Time Slot 2x2 Grid */}
+              {/* Time Slot 2x2 Grid with Disabled State for Recorded Slots */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Time Slot
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Time Slot
+                  </label>
+                  {recordedSlots.length > 0 && (
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {recordedSlots.length} of 4 slots logged
+                    </span>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {SLOTS.map((s) => {
+                    const isRecorded = recordedSlots.includes(s);
                     const isSelected = slot === s;
+
                     return (
                       <button
                         type="button"
                         key={s}
-                        onClick={() => setSlot(s)}
+                        disabled={isRecorded}
+                        onClick={() => !isRecorded && setSlot(s)}
                         className={`flex items-center justify-between p-4 rounded-xl text-left text-sm font-medium transition-all ${
-                          isSelected
-                            ? 'border-2 border-brand-500 bg-brand-50/40 text-brand-900'
-                            : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                          isRecorded
+                            ? 'border border-slate-200/80 bg-slate-50/70 text-slate-400 cursor-not-allowed opacity-60 select-none'
+                            : isSelected
+                            ? 'border-2 border-brand-500 bg-brand-50/40 text-brand-900 shadow-sm'
+                            : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50'
                         }`}
+                        title={isRecorded ? `${s} reading is already recorded for this date` : `Select ${s}`}
                       >
-                        <span>{s}</span>
+                        <div className="flex items-center space-x-2">
+                          <span>{s}</span>
+                          {isRecorded && (
+                            <span className="text-[10px] font-bold tracking-wider uppercase text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded">
+                              Done
+                            </span>
+                          )}
+                        </div>
+
                         <div
-                          className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                            isSelected ? 'bg-brand-500' : 'border border-slate-300'
+                          className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                            isRecorded
+                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                              : isSelected
+                              ? 'bg-brand-500'
+                              : 'border border-slate-300'
                           }`}
                         >
-                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          {isRecorded ? (
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          ) : isSelected ? (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          ) : null}
                         </div>
                       </button>
                     );
@@ -187,9 +278,10 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
                   <input
                     type="text"
                     value={value}
+                    disabled={allSlotsCompleted}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder="Enter value"
-                    className="w-full pl-4 pr-16 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                    className="w-full pl-4 pr-16 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-800 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
                     mg/dL
@@ -210,8 +302,8 @@ export default function AddReadingPage({ onBack, onSuccess, initialDate, initial
               <div className="flex items-center space-x-3 pt-2">
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-6 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-medium text-sm transition-all shadow-sm disabled:opacity-50"
+                  disabled={loading || allSlotsCompleted}
+                  className="px-6 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-medium text-sm transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Saving...' : 'Save reading'}
                 </button>
