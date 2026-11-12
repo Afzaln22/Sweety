@@ -350,6 +350,12 @@ export async function executeLocalQuery(text, params = []) {
 
   // 16. DELETE FROM readings
   if (/^DELETE FROM readings/i.test(sql)) {
+    if (params.length === 0) {
+      const count = data.readings.length;
+      data.readings = [];
+      saveData(data);
+      return { rows: [], rowCount: count };
+    }
     const [id, userId] = params;
     const index = data.readings.findIndex((r) => r.id === id && r.user_id === userId);
     if (index === -1) return { rows: [], rowCount: 0 };
@@ -357,6 +363,19 @@ export async function executeLocalQuery(text, params = []) {
     data.readings.splice(index, 1);
     saveData(data);
     return { rows: [{ id }], rowCount: 1 };
+  }
+
+  // 17. DELETE FROM users WHERE email = $1
+  if (/^DELETE FROM users WHERE email =/i.test(sql)) {
+    const email = params[0]?.toLowerCase();
+    data.users = data.users.filter((u) => u.email.toLowerCase() !== email);
+    saveData(data);
+    return { rows: [], rowCount: 1 };
+  }
+
+  // 18. Gracefully ignore DDL migrations in local JSON store
+  if (/^CREATE TABLE|^CREATE INDEX|^ALTER TABLE/i.test(sql) || sql.includes('CREATE TABLE IF NOT EXISTS')) {
+    return { rows: [], rowCount: 0 };
   }
 
   console.warn('Unhandled SQL query in local store:', sql);

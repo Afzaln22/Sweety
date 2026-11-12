@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
 import { pool } from '../config/db.js';
 import { runMigration } from './migrate.js';
 
