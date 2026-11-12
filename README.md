@@ -130,7 +130,7 @@ npm run clean:data
 
 ---
 
-##  Key Features
+## Key Features
 
 ### 1. Authentication & Patient Data Isolation
 - **Registration & Login**: Secure patient onboarding with name, email, and password.
@@ -243,7 +243,7 @@ CREATE INDEX idx_users_email ON users (email);
 
 ## Notes (Assumptions & What I'd Improve With More Time)
 
-###  Assumptions
+### Assumptions
 1. **Clinical Slots**:
    - The clinical routine defines exactly 4 slots per day: `Morning (fasting)`, `After breakfast`, `After lunch`, and `After dinner`. Each slot can be recorded at most once per calendar day per patient.
 2. **Reference Date & Dynamic Date Synchronization**:
@@ -260,7 +260,7 @@ CREATE INDEX idx_users_email ON users (email);
 
 ---
 
-###  What I'd Improve With More Time
+### What I'd Improve With More Time
 1. **Continuous Glucose Monitor (CGM) Integration**:
    - Integrate OAuth2 connectors for Dexcom (G6/G7) and Abbott FreeStyle Libre APIs to ingest real-time continuous sensor readings, reducing manual patient entry burden.
 2. **Clinician & Caregiver Portal (Role-Based Access Control - RBAC)**:
