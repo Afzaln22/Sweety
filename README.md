@@ -7,6 +7,129 @@ A patient-centric blood glucose tracking and reporting web application built wit
 
 ---
 
+## 🚀 How to Install & Run
+
+### 1. Prerequisites
+- **Node.js** (v18+)
+- **PostgreSQL** (v14+) OR Docker Desktop
+
+---
+
+### 2. Installation
+
+Clone the repository and install all dependencies:
+```bash
+# 1. Clone repository
+git clone https://github.com/Afzaln22/Sweety.git
+cd Sweety
+
+# 2. Install root dependencies (concurrently)
+npm install
+
+# 3. Install backend dependencies
+cd backend && npm install
+
+# 4. Install frontend dependencies
+cd ../frontend && npm install
+cd ..
+```
+
+---
+
+### 3. Setting Up the Database & Environment
+
+1. Copy `.env.example` to `.env` in the root and in `backend/`:
+   ```bash
+   cp .env.example .env
+   cp backend/.env.example backend/.env
+   ```
+2. Verify PostgreSQL credentials in `backend/.env`:
+   ```env
+   PORT=5000
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sweety_db
+   PGHOST=localhost
+   PGPORT=5432
+   PGUSER=postgres
+   PGPASSWORD=postgres
+   PGDATABASE=sweety_db
+   JWT_SECRET=sweety-super-secret-jwt-key-2026
+   ```
+3. Run the database migrations:
+   ```bash
+   npm run migrate
+   ```
+4. **Seed Demo User & Sample Readings**:
+   ```bash
+   npm run seed
+   ```
+   *Creates demo user `alex.morgan@example.com` (`Password123!`) with 21 sample readings across morning, breakfast, lunch, and dinner slots matching the design specification.*
+
+> **Dual-Mode Database Note**: If PostgreSQL is temporarily not running, the application automatically falls back to an embedded persistent JSON store (`backend/data/sweety_db.json`), ensuring evaluation works immediately with zero setup hurdles.
+
+---
+
+### 4. Running the Application
+
+#### Option A: One Command (Recommended)
+From the root directory, run both the backend server and frontend client concurrently:
+```bash
+npm run dev
+```
+- **Frontend UI**: `http://localhost:3000`
+- **Backend API**: `http://localhost:5000/api/health`
+
+#### Option B: Separate Terminals
+- **Run Backend**:
+  ```bash
+  cd backend
+  npm run dev
+  # Server starts on http://localhost:5000
+  ```
+- **Run Frontend**:
+  ```bash
+  cd frontend
+  npm run dev
+  # Client starts on http://localhost:3000
+  ```
+
+#### Option C: Docker Compose
+```bash
+docker-compose up --build
+```
+
+---
+
+### 5. Running Automated Tests
+
+Run the complete test suite (10/10 tests):
+```bash
+npm test
+```
+*(Or `npm --prefix backend test`)*
+
+The Jest test suite verifies:
+- All 5 validation rules and exact UI error messages.
+- Glucose range enforcement (40 – 600 mg/dL).
+- Duplicate slot prevention and 4-per-day limit.
+- Future date restriction.
+- Statistical calculations (highest, lowest, count, and average rounded to 1 decimal place).
+- Empty state handling and multi-month date scoping.
+
+---
+
+### 6. Demo Account Credentials
+
+If the database is seeded (`npm run seed`):
+- **Email:** `alex.morgan@example.com`
+- **Password:** `Password123!`
+
+To start with a fresh slate without old readings:
+```bash
+npm run clean:data
+```
+
+---
+
 ## 🌟 Key Features
 
 ### 1. Authentication & Patient Data Isolation
@@ -118,116 +241,6 @@ CREATE INDEX idx_users_email ON users (email);
 
 ---
 
-## 🚀 How to Install & Run
-
-### 1. Prerequisites
-- **Node.js** (v18+)
-- **PostgreSQL** (v14+) OR Docker Desktop
-
----
-
-### 2. Installation
-
-Clone the repository and install all dependencies:
-```bash
-# 1. Clone repository
-git clone https://github.com/Afzaln22/Sweety.git
-cd Sweety
-
-# 2. Install root dependencies (concurrently)
-npm install
-
-# 3. Install backend dependencies
-cd backend && npm install
-
-# 4. Install frontend dependencies
-cd ../frontend && npm install
-cd ..
-```
-
----
-
-### 3. Setting Up the Database & Environment
-
-1. Copy `.env.example` to `.env` in the root and in `backend/`:
-   ```bash
-   cp .env.example .env
-   cp backend/.env.example backend/.env
-   ```
-2. Verify PostgreSQL credentials in `backend/.env`:
-   ```env
-   PORT=5000
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sweety_db
-   PGHOST=localhost
-   PGPORT=5432
-   PGUSER=postgres
-   PGPASSWORD=postgres
-   PGDATABASE=sweety_db
-   JWT_SECRET=sweety-super-secret-jwt-key-2026
-   ```
-3. Run the database migrations:
-   ```bash
-   npm run migrate
-   ```
-4. **Seed Demo User & Sample Readings**:
-   ```bash
-   npm run seed
-   ```
-   *Creates demo user `alex.morgan@example.com` (`Password123!`) with 21 sample readings across morning, breakfast, lunch, and dinner slots matching the design specification.*
-
-> **Dual-Mode Database Note**: If PostgreSQL is temporarily not running, the application automatically falls back to an embedded persistent JSON store (`backend/data/sweety_db.json`), ensuring evaluation works immediately with zero setup hurdles.
-
----
-
-### 4. Running the Application
-
-#### Option A: One Command (Recommended)
-From the root directory, run both the backend server and frontend client concurrently:
-```bash
-npm run dev
-```
-- **Frontend UI**: `http://localhost:3000`
-- **Backend API**: `http://localhost:5000/api/health`
-
-#### Option B: Separate Terminals
-- **Run Backend**:
-  ```bash
-  cd backend
-  npm run dev
-  # Server starts on http://localhost:5000
-  ```
-- **Run Frontend**:
-  ```bash
-  cd frontend
-  npm run dev
-  # Client starts on http://localhost:3000
-  ```
-
-#### Option C: Docker Compose
-```bash
-docker-compose up --build
-```
-
----
-
-### 5. Running Automated Tests
-
-Run the complete test suite (10/10 tests):
-```bash
-npm test
-```
-*(Or `npm --prefix backend test`)*
-
-The Jest test suite verifies:
-- All 5 validation rules and exact UI error messages.
-- Glucose range enforcement (40 – 600 mg/dL).
-- Duplicate slot prevention and 4-per-day limit.
-- Future date restriction.
-- Statistical calculations (highest, lowest, count, and average rounded to 1 decimal place).
-- Empty state handling and multi-month date scoping.
-
----
-
 ## 📝 Notes (Assumptions & What I'd Improve With More Time)
 
 ### 📌 Assumptions
@@ -260,19 +273,6 @@ The Jest test suite verifies:
    - Implement server-side PDF generation (via Puppeteer or PDFKit) summarizing monthly glucose variability, standard deviation, time-in-range (TIR %), and spike history for clinical consultations.
 6. **Progressive Web App (PWA) & Offline Sync**:
    - Add a service worker and IndexedDB offline cache to allow patients to record glucose readings in areas without internet connectivity, auto-syncing when back online.
-
----
-
-## 🔑 Demo Account Credentials
-
-If the database is seeded (`npm run seed`):
-- **Email:** `alex.morgan@example.com`
-- **Password:** `Password123!`
-
-To start with a fresh slate without old readings:
-```bash
-npm run clean:data
-```
 
 ---
 
