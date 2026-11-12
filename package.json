@@ -4,11 +4,16 @@
   "description": "Sweety - Blood Glucose Tracker (Decoupled Frontend & Backend)",
   "private": true,
   "scripts": {
-    "frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,magenta\" \"npm run backend\" \"npm run frontend\"",
+    "start": "npm run dev",
     "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend run dev",
     "test:backend": "npm --prefix backend test",
     "build:frontend": "npm --prefix frontend run build",
     "migrate": "npm --prefix backend run migrate",
     "seed": "npm --prefix backend run seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }
