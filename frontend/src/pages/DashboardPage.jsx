@@ -1,8 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Clock, ArrowUpRight, ArrowDownRight, Activity, ArrowRight, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Clock, ArrowUpRight, ArrowDownRight, Activity, ArrowRight } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+
+function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 export default function DashboardPage({ onAddReading, onViewAllReadings }) {
   const { user } = useAuth();
@@ -10,19 +18,41 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
   const [trendData, setTrendData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Default reference date is 2026-10-15 matching the Figma prototype or current date
-  const todayStr = '2026-10-15';
+  // Dynamic date state
+  const realToday = getTodayDateString();
+  const [activeDate, setActiveDate] = useState(realToday);
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
         setLoading(true);
-        const [repRes, trendRes] = await Promise.all([
-          api.getReports(todayStr),
-          api.getTrend(todayStr)
-        ]);
+        let targetDate = realToday;
+        let repRes = await api.getReports(targetDate);
+
+        // If today has 0 readings, check if user has readings on an earlier date (e.g. prototype demo data)
+        const todayReadings = repRes.data?.daily?.readings || [];
+        if (todayReadings.length === 0) {
+          const recentRes = await api.getReadings({ limit: 1 });
+          if (recentRes.data && recentRes.data.length > 0) {
+            const latestDate = recentRes.data[0].reading_date?.slice
+              ? recentRes.data[0].reading_date.slice(0, 10)
+              : String(recentRes.data[0].reading_date).slice(0, 10);
+
+            if (latestDate) {
+              const latestRepRes = await api.getReports(latestDate);
+              if (latestRepRes.data?.daily?.readings?.length > 0) {
+                targetDate = latestDate;
+                repRes = latestRepRes;
+              }
+            }
+          }
+        }
+
+        setActiveDate(targetDate);
         setReports(repRes.data);
-        setTrendData(trendRes.data);
+
+        const trendRes = await api.getTrend(targetDate);
+        setTrendData(trendRes.data || []);
       } catch (err) {
         console.error('Error loading dashboard data:', err);
       } finally {
@@ -30,7 +60,7 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
       }
     }
     loadDashboardData();
-  }, []);
+  }, [realToday]);
 
   const daily = reports?.daily || {};
   const stats = daily?.stats || {};
@@ -71,6 +101,22 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
     return { label: 'High', bg: 'bg-rose-50 text-rose-700 border-rose-200' };
   };
 
+  // Formatted date string for greeting
+  const formattedDateStr = useMemo(() => {
+    try {
+      const parts = activeDate.split('-');
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return d.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } catch {
+      return activeDate;
+    }
+  }, [activeDate]);
+
   return (
     <div className="space-y-8 pb-12">
       {/* Top Banner & Greeting matching Screen 01 */}
@@ -81,11 +127,11 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
               Good morning, {user?.name?.split(' ')[0] || 'Alex'}
             </h1>
             <span className="text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase">
-              Today
+              {activeDate === realToday ? 'Today' : 'Latest'}
             </span>
           </div>
           <p className="text-xs text-slate-500">
-            Here's your glucose overview for Wednesday, October 15, 2026.
+            Here's your glucose overview for {formattedDateStr}.
           </p>
         </div>
 
@@ -121,7 +167,7 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
           </div>
           <div className="text-xs text-slate-500 font-medium mb-1">Average glucose</div>
           <div className="text-2xl font-bold text-slate-900 tracking-tight mb-1">
-            {stats.average !== null ? stats.average : '—'}{' '}
+            {stats.average !== null && stats.average !== undefined ? stats.average : '—'}{' '}
             <span className="text-sm font-normal text-slate-500">mg/dL</span>
           </div>
           <div className="text-[11px] text-slate-400">
@@ -136,47 +182,51 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
           </div>
           <div className="text-xs text-slate-500 font-medium mb-1">Highest reading</div>
           <div className="text-2xl font-bold text-slate-900 tracking-tight mb-1">
-            {stats.highest !== null ? stats.highest : '—'}{' '}
+            {stats.highest !== null && stats.highest !== undefined ? stats.highest : '—'}{' '}
             <span className="text-sm font-normal text-slate-500">mg/dL</span>
           </div>
           <div className="text-[11px] text-slate-400">
-            {stats.highestSlot || 'today'}
+            today
           </div>
         </div>
 
         {/* Card 4: Lowest reading */}
         <div className="bg-white rounded-3xl p-6 border border-[#E8ECF2] shadow-sm">
-          <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-brand-500 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
             <ArrowDownRight className="w-4 h-4" />
           </div>
           <div className="text-xs text-slate-500 font-medium mb-1">Lowest reading</div>
           <div className="text-2xl font-bold text-slate-900 tracking-tight mb-1">
-            {stats.lowest !== null ? stats.lowest : '—'}{' '}
+            {stats.lowest !== null && stats.lowest !== undefined ? stats.lowest : '—'}{' '}
             <span className="text-sm font-normal text-slate-500">mg/dL</span>
           </div>
           <div className="text-[11px] text-slate-400">
-            {stats.lowestSlot || 'today'}
+            today
           </div>
         </div>
       </div>
 
-      {/* Middle Row: Trend Chart (Left) & Daily Check-in (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Glucose Trend Chart matching Screen 01 */}
+      {/* Middle Two Columns: Trend Chart (Left) & Daily Check-in (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left: 7-day Glucose Trend Chart */}
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-[#E8ECF2] shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-slate-900">Glucose trend</h2>
               <p className="text-xs text-slate-400">Your readings over the last 7 days</p>
             </div>
-            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-brand-50 text-brand-600">
+            <span className="text-[11px] font-semibold text-brand-600 bg-brand-50 px-3 py-1 rounded-full">
               Last 7 days
             </span>
           </div>
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart
+                data={trendData}
+                margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
+                barSize={18}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                 <XAxis
                   dataKey="label"
@@ -185,21 +235,26 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
                   tick={{ fontSize: 11, fill: '#94A3B8' }}
                 />
                 <YAxis
-                  domain={[40, 200]}
+                  domain={[0, 200]}
+                  ticks={[40, 80, 120, 160, 200]}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: '#94A3B8' }}
                 />
                 <Tooltip
-                  cursor={{ fill: 'transparent' }}
+                  cursor={{ fill: 'rgba(99, 102, 241, 0.04)' }}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
-                      const data = payload[0].payload;
+                      const d = payload[0].payload;
                       return (
-                        <div className="bg-slate-900 text-white text-xs rounded-xl p-3 shadow-lg">
-                          <div className="font-bold mb-1">{data.label}</div>
-                          <div>Avg: {data.avg || 'No entry'} mg/dL</div>
-                          {data.count > 0 && <div className="text-slate-400">{data.count} reading(s)</div>}
+                        <div className="bg-slate-900 text-white rounded-xl p-3 shadow-xl border border-slate-700 min-w-[130px]">
+                          <div className="text-[11px] text-slate-300 font-medium">{d.label}</div>
+                          <div className="text-lg font-bold text-white mt-0.5">
+                            {d.avg ? `${d.avg} mg/dL` : 'No reading'}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-1">
+                            {d.count > 0 ? `${d.count} reading(s)` : 'Not logged'}
+                          </div>
                         </div>
                       );
                     }
@@ -208,23 +263,25 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
                 />
                 <Bar
                   dataKey="avg"
-                  radius={[8, 8, 0, 0]}
-                  fill="#5B50E6"
+                  radius={[8, 8, 8, 8]}
+                  fill="#E0E7FF"
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Daily Check-in Card matching Screen 01 */}
+        {/* Right: Daily Check-in Widget */}
         <div className="bg-white rounded-3xl p-6 border border-[#E8ECF2] shadow-sm flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-900 mb-1">Daily check-in</h2>
-            <p className="text-xs text-slate-400 mb-4">Keep your routine consistent</p>
+            <div className="mb-4">
+              <h2 className="text-base font-bold text-slate-900">Daily check-in</h2>
+              <p className="text-xs text-slate-400">Keep your routine consistent</p>
+            </div>
 
-            {/* Progress Bar */}
+            {/* Progress bar matching Screen 01 */}
             <div className="mb-6">
-              <div className="flex justify-between text-xs font-semibold text-slate-700 mb-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-brand-600 mb-2">
                 <span>{completedCount} of 4 completed</span>
                 <span>{progressPercent}%</span>
               </div>
@@ -294,26 +351,27 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
               <thead>
                 <tr className="border-b border-slate-100 text-[10px] uppercase tracking-wider font-bold text-slate-400">
                   <th className="pb-3 font-bold">Time Slot</th>
-                  <th className="pb-3 font-bold">Date & Time</th>
+                  <th className="pb-3 font-bold">Date &amp; Time</th>
                   <th className="pb-3 font-bold">Glucose Value</th>
                   <th className="pb-3 font-bold">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-50">
                 {readings.map((r) => {
                   const badge = getStatusBadge(r.glucose_value);
+                  const dateStr = r.reading_date?.slice ? r.reading_date.slice(0, 10) : r.reading_date;
+                  const displayTime = r.recorded_at ? `${dateStr} · ${r.recorded_at}` : dateStr;
+
                   return (
                     <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 font-semibold text-slate-900">{r.slot}</td>
-                      <td className="py-4 text-slate-500">
-                        Today · {r.recorded_at || 'Recorded'}
-                      </td>
-                      <td className="py-4 font-bold text-slate-900">
+                      <td className="py-3.5 font-bold text-slate-800">{r.slot}</td>
+                      <td className="py-3.5 text-slate-500">{displayTime}</td>
+                      <td className="py-3.5 font-bold text-slate-900">
                         {r.glucose_value} mg/dL
                       </td>
-                      <td className="py-4">
+                      <td className="py-3.5">
                         <span
-                          className={`inline-block px-3 py-1 rounded-full text-[11px] font-semibold border ${badge.bg}`}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badge.bg}`}
                         >
                           {badge.label}
                         </span>
@@ -329,4 +387,3 @@ export default function DashboardPage({ onAddReading, onViewAllReadings }) {
     </div>
   );
 }
-

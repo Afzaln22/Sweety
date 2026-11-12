@@ -18,10 +18,19 @@ import {
 } from 'recharts';
 import EmptyState from '../components/EmptyState';
 
+function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function ReportsPage({ onAddReading }) {
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   // Report View Tabs matching Figma Screen 08: 'daily' | 'monthly' | 'yearly'
   const [activeReportTab, setActiveReportTab] = useState('monthly');
-  const [selectedMonth, setSelectedMonth] = useState('2026-10');
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,8 +38,7 @@ export default function ReportsPage({ onAddReading }) {
     async function loadReports() {
       try {
         setLoading(true);
-        // Anchor date for October 2026
-        const anchorDate = `${selectedMonth}-15`;
+        const anchorDate = selectedMonth === currentMonth ? getTodayDateString() : `${selectedMonth}-15`;
         const res = await api.getReports(anchorDate);
         setReportData(res.data);
       } catch (err) {
@@ -40,7 +48,7 @@ export default function ReportsPage({ onAddReading }) {
       }
     }
     loadReports();
-  }, [selectedMonth]);
+  }, [selectedMonth, currentMonth]);
 
   const daily = reportData?.daily || { stats: {}, readings: [] };
   const mtd = reportData?.monthToDate || { stats: {}, readings: [] };
@@ -239,6 +247,7 @@ export default function ReportsPage({ onAddReading }) {
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="appearance-none bg-white border border-[#E8ECF2] rounded-xl px-4 py-2 pr-9 text-xs font-semibold text-slate-800 shadow-sm focus:outline-none cursor-pointer"
               >
+                <option value="2026-11">November 2026</option>
                 <option value="2026-10">October 2026</option>
                 <option value="2026-09">September 2026</option>
                 <option value="2026-08">August 2026</option>
