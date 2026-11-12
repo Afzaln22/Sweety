@@ -95,6 +95,10 @@ export default function App() {
         <Header
           breadcrumbPath={activeTab}
           onOpenSidebar={() => setMobileMenuOpen(true)}
+          onNavigateSettings={() => {
+            setActiveTab('settings');
+            setCurrentView('main');
+          }}
         />
 
         {/* Content area: full 100% width on mobile, with bottom padding for mobile nav */}
@@ -121,22 +125,60 @@ export default function App() {
           )}
 
           {activeTab === 'settings' && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8ECF2] shadow-sm max-w-2xl">
-              <h2 className="text-xl font-bold text-slate-900 mb-1">Account &amp; Preferences</h2>
-              <p className="text-xs text-slate-500 mb-6">Manage your profile and clinical parameters.</p>
-
-              <div className="space-y-4 text-xs">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8ECF2] shadow-sm max-w-2xl animate-fade-in">
+              {/* Header with Avatar and User Info */}
+              <div className="flex items-center space-x-4 mb-6 pb-6 border-b border-slate-100">
+                <div className="w-14 h-14 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+                  {user?.name
+                    ? (user.name.trim().split(' ').length > 1
+                        ? `${user.name.trim().split(' ')[0][0]}${user.name.trim().split(' ')[1][0]}`
+                        : user.name.slice(0, 2)
+                      ).toUpperCase()
+                    : 'AM'}
+                </div>
                 <div>
-                  <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">Name</span>
+                  <h2 className="text-xl font-bold text-slate-900 leading-tight">
+                    {user?.name || 'Alex Morgan'}
+                  </h2>
+                  <p className="text-xs text-slate-400 font-medium mt-0.5 break-all">
+                    {user?.email}
+                  </p>
+                  <span className="inline-block mt-1.5 text-[10px] font-bold text-brand-600 bg-brand-50 border border-brand-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    Personal Account
+                  </span>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-base font-bold text-slate-900 mb-1">Account &amp; Preferences</h3>
+                <p className="text-xs text-slate-500">Manage your profile and clinical parameters.</p>
+              </div>
+
+              <div className="space-y-5 text-xs">
+                <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-100">
+                  <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">Full Name</span>
                   <div className="font-semibold text-slate-800 text-sm">{user?.name}</div>
                 </div>
-                <div>
-                  <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">Email</span>
+
+                <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-100">
+                  <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Address</span>
                   <div className="font-semibold text-slate-800 text-sm break-all">{user?.email}</div>
                 </div>
-                <div>
-                  <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">Target Range</span>
-                  <div className="font-semibold text-emerald-600">70 – 140 mg/dL (Normal Fasting &amp; Post-meal)</div>
+
+                <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-100/70">
+                  <span className="font-bold text-emerald-600 uppercase tracking-wider block mb-1">Clinical Target Range</span>
+                  <div className="font-semibold text-emerald-800 text-sm">70 – 140 mg/dL</div>
+                  <div className="text-[11px] text-emerald-600/80 mt-0.5">Normal Fasting &amp; Post-meal Target</div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-100">
+                  <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">Daily Schedule Slots</span>
+                  <div className="font-semibold text-slate-800 text-xs flex flex-wrap gap-1.5 mt-1.5">
+                    <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700">Morning (fasting)</span>
+                    <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700">After breakfast</span>
+                    <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700">After lunch</span>
+                    <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700">After dinner</span>
+                  </div>
                 </div>
               </div>
             </div>

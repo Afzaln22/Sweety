@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Menu } from 'lucide-react';
 
-export default function Header({ breadcrumbPath, onOpenSidebar }) {
+export default function Header({ breadcrumbPath, onOpenSidebar, onNavigateSettings }) {
   const { user } = useAuth();
 
   const getInitials = (name) => {
@@ -40,8 +40,14 @@ export default function Header({ breadcrumbPath, onOpenSidebar }) {
         </div>
       </div>
 
-      {/* Right: User Profile Badge */}
-      <div className="flex items-center space-x-2 sm:space-x-3 bg-white px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
+      {/* Right: User Profile Badge (Clickable - Redirects to Account Info) */}
+      <button
+        type="button"
+        onClick={onNavigateSettings}
+        className="flex items-center space-x-2 sm:space-x-3 bg-white hover:bg-slate-50 active:scale-[0.98] px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-200/80 shadow-sm transition-all hover:shadow cursor-pointer text-left focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+        title="View Account & Preferences"
+        aria-label="View Account Information"
+      >
         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-xs shrink-0">
           {getInitials(user?.name)}
         </div>
@@ -53,7 +59,7 @@ export default function Header({ breadcrumbPath, onOpenSidebar }) {
             Personal Account
           </div>
         </div>
-      </div>
+      </button>
     </header>
   );
 }
