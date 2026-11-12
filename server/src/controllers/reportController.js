@@ -1,7 +1,7 @@
 import { pool } from '../config/db.js';
 
 /**
- * Computes statistical metrics (Highest, Lowest, Average rounded to 1 decimal, Count)
+ * Computes statistical metrics (Highest, Lowest, Average rounded to 1 decimal, Count, Spikes, Dips, Time in range)
  * for an array of reading records.
  */
 function computeReportStats(readings) {
@@ -14,7 +14,10 @@ function computeReportStats(readings) {
       lowestSlot: null,
       lowestDate: null,
       average: null,
-      count: 0
+      count: 0,
+      spikes: 0,
+      dips: 0,
+      inRangePercent: 0
     };
   }
 
@@ -27,9 +30,21 @@ function computeReportStats(readings) {
   let lowestDate = readings[0].reading_date;
 
   let sum = 0;
+  let spikes = 0;
+  let dips = 0;
+  let inRange = 0;
 
   for (const r of readings) {
     sum += r.glucose_value;
+
+    if (r.glucose_value > 140) {
+      spikes++;
+    } else if (r.glucose_value < 70) {
+      dips++;
+    } else {
+      inRange++;
+    }
+
     if (r.glucose_value > highest) {
       highest = r.glucose_value;
       highestSlot = r.slot;
@@ -45,6 +60,7 @@ function computeReportStats(readings) {
   const rawAvg = sum / readings.length;
   // Round to exactly 1 decimal place as required
   const average = Math.round(rawAvg * 10) / 10;
+  const inRangePercent = Math.round((inRange / readings.length) * 100);
 
   return {
     highest,
@@ -54,8 +70,56 @@ function computeReportStats(readings) {
     lowestSlot,
     lowestDate,
     average,
-    count: readings.length
+    count: readings.length,
+    spikes,
+    dips,
+    inRangePercent
   };
+}
+
+/**
+ * Builds chronological chart points with increase/decrease delta and status classification
+ */
+function buildChronologicalChartData(readings) {
+  if (!readings || readings.length === 0) return [];
+
+  const slotOrder = {
+    'Morning (fasting)': 1,
+    'After breakfast': 2,
+    'After lunch': 3,
+    'After dinner': 4
+  };
+
+  const sorted = [...readings].sort((a, b) => {
+    const dateA = a.reading_date?.slice ? a.reading_date.slice(0, 10) : String(a.reading_date).slice(0, 10);
+    const dateB = b.reading_date?.slice ? b.reading_date.slice(0, 10) : String(b.reading_date).slice(0, 10);
+    if (dateA !== dateB) return dateA.localeCompare(dateB);
+    return (slotOrder[a.slot] || 5) - (slotOrder[b.slot] || 5);
+  });
+
+  return sorted.map((r, i) => {
+    const prev = i > 0 ? sorted[i - 1].glucose_value : null;
+    const diff = prev !== null ? r.glucose_value - prev : 0;
+    const dateStr = r.reading_date?.slice ? r.reading_date.slice(0, 10) : String(r.reading_date).slice(0, 10);
+    const shortDate = new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    let status = 'in_range';
+    if (r.glucose_value > 140) status = 'spike';
+    else if (r.glucose_value < 70) status = 'dip';
+
+    return {
+      id: r.id,
+      date: dateStr,
+      label: `${shortDate} · ${r.slot.replace('After ', '')}`,
+      shortDate,
+      slot: r.slot,
+      time: r.recorded_at || '',
+      value: r.glucose_value,
+      diff,
+      diffLabel: diff > 0 ? `+${diff}` : String(diff),
+      status
+    };
+  });
 }
 
 /**
@@ -86,7 +150,7 @@ export async function getReports(req, res) {
     const todayStr = new Date().toISOString().slice(0, 10);
     const selectedDate = req.query.date || todayStr;
 
-    const { year, month, day } = parseDateParts(selectedDate);
+    const { year, month } = parseDateParts(selectedDate);
 
     // 1. Daily Report Range: Exactly the selected date
     const dailyStart = selectedDate;
@@ -100,7 +164,6 @@ export async function getReports(req, res) {
     const prevYear = month === 1 ? year - 1 : year;
     const prevMonth = month === 1 ? 12 : month - 1;
     const prevMonthStart = formatDateStr(prevYear, prevMonth, 1);
-    // Last day of previous month:
     const lastDayOfPrevMonth = new Date(Date.UTC(prevYear, prevMonth, 0)).getUTCDate();
     const prevMonthEnd = formatDateStr(prevYear, prevMonth, lastDayOfPrevMonth);
 
@@ -149,17 +212,20 @@ export async function getReports(req, res) {
         daily: {
           range: { start: dailyStart, end: dailyEnd },
           stats: dailyStats,
-          readings: dailyRes.rows
+          readings: dailyRes.rows,
+          chartData: buildChronologicalChartData(dailyRes.rows)
         },
         monthToDate: {
           range: { start: mtdStart, end: mtdEnd },
           stats: mtdStats,
-          readings: mtdRes.rows.slice(0, 10) // recent readings in period
+          readings: mtdRes.rows.slice(0, 10), // recent readings in period
+          chartData: buildChronologicalChartData(mtdRes.rows)
         },
         previousMonth: {
           range: { start: prevMonthStart, end: prevMonthEnd },
           stats: prevMonthStats,
-          readings: prevMonthRes.rows.slice(0, 10) // recent readings in period
+          readings: prevMonthRes.rows.slice(0, 10), // recent readings in period
+          chartData: buildChronologicalChartData(prevMonthRes.rows)
         }
       }
     });
@@ -198,10 +264,11 @@ export async function getTrend(req, res) {
       [userId, startStr, endStr]
     );
 
-    // Map all 7 days so no day is missing
     const daysMap = {};
-    result.rows.forEach(row => {
-      const d = row.reading_date.toISOString ? row.reading_date.toISOString().slice(0, 10) : String(row.reading_date).slice(0, 10);
+    result.rows.forEach((row) => {
+      const d = row.reading_date.toISOString
+        ? row.reading_date.toISOString().slice(0, 10)
+        : String(row.reading_date).slice(0, 10);
       daysMap[d] = {
         avg: Math.round(parseFloat(row.avg_value) * 10) / 10,
         max: parseInt(row.max_value, 10),
@@ -238,4 +305,3 @@ export async function getTrend(req, res) {
     });
   }
 }
-
