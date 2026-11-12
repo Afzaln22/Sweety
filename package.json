@@ -1,14 +1,14 @@
 {
   "name": "sweety-app",
   "version": "1.0.0",
-  "description": "Sweety - Blood Glucose Tracker (MERN / PERN with PostgreSQL)",
+  "description": "Sweety - Blood Glucose Tracker (Decoupled Frontend & Backend)",
   "private": true,
   "scripts": {
-    "server": "npm --prefix server run dev",
-    "client": "npm --prefix client run dev",
-    "test:server": "npm --prefix server test",
-    "migrate": "npm --prefix server run migrate",
-    "seed": "npm --prefix server run seed"
+    "frontend": "npm --prefix frontend run dev",
+    "backend": "npm --prefix backend run dev",
+    "test:backend": "npm --prefix backend test",
+    "build:frontend": "npm --prefix frontend run build",
+    "migrate": "npm --prefix backend run migrate",
+    "seed": "npm --prefix backend run seed"
   }
 }
-

@@ -1,5 +1,5 @@
 {
-  "name": "sweety-server",
+  "name": "sweety-backend",
   "version": "1.0.0",
   "description": "Sweety Blood Glucose Tracker - Backend API",
   "main": "src/index.js",

@@ -121,7 +121,7 @@ CREATE INDEX idx_users_email ON users (email);
 
 #### 1. Setup Backend:
 ```bash
-cd server
+cd backend
 cp .env.example .env
 npm install
 npm run migrate   # Run database migrations
@@ -131,7 +131,7 @@ npm run dev       # Starts API server on port 5000
 
 #### 2. Setup Frontend:
 ```bash
-cd client
+cd frontend
 npm install
 npm run dev       # Starts Vite dev server on port 3000
 ```
@@ -148,7 +148,7 @@ Open `http://localhost:3000` in your browser.
 
 Run the backend validation and reporting test suite:
 ```bash
-npm --prefix server test
+npm --prefix backend test
 ```
 
 Test output verifies:

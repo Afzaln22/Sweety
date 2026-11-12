@@ -13,18 +13,18 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./server/src/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  server:
+  backend:
     build:
-      context: ./server
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: sweety-server
+    container_name: sweety-backend
     restart: always
     environment:
       PORT: 5000
@@ -36,17 +36,16 @@ services:
       db:
         condition: service_healthy
 
-  client:
+  frontend:
     build:
-      context: ./client
+      context: ./frontend
       dockerfile: Dockerfile
-    container_name: sweety-client
+    container_name: sweety-frontend
     restart: always
     ports:
       - "3000:3000"
     depends_on:
-      - server
+      - backend
 
 volumes:
   postgres_data:
-
