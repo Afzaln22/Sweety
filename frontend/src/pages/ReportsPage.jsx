@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { generatePdfReport } from '../utils/generatePdfReport';
 import {
   ArrowUpRight,
   ChevronDown,
   ArrowDownRight,
   Activity,
-  Calendar
+  Calendar,
+  FileDown,
+  FileSpreadsheet
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -27,6 +31,7 @@ function getTodayDateString() {
 }
 
 export default function ReportsPage({ onAddReading }) {
+  const { user } = useAuth();
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   // Report View Tabs matching Figma Screen 08: 'daily' | 'monthly' | 'yearly'
   const [activeReportTab, setActiveReportTab] = useState('monthly');
@@ -145,7 +150,18 @@ export default function ReportsPage({ onAddReading }) {
     ];
   }, [activeReportTab, readings]);
 
-  const handleExport = () => {
+  const handleExportPdf = () => {
+    generatePdfReport({
+      userName: user?.name || 'Alex Morgan',
+      userEmail: user?.email || 'alex.morgan@example.com',
+      reportType: activeReportTab,
+      selectedPeriod: selectedMonth,
+      stats: stats,
+      readings: readings
+    });
+  };
+
+  const handleExportCsv = () => {
     const csvContent =
       'data:text/csv;charset=utf-8,' +
       ['Date,Slot,Value (mg/dL),Recorded At']
@@ -256,13 +272,24 @@ export default function ReportsPage({ onAddReading }) {
             </div>
           </div>
 
-          <button
-            onClick={handleExport}
-            className="inline-flex items-center space-x-2 bg-white border border-[#E8ECF2] rounded-xl px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-all"
-          >
-            <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
-            <span>Export report</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleExportPdf}
+              className="inline-flex items-center space-x-2 bg-brand-500 hover:bg-brand-600 active:scale-[0.98] text-white font-semibold rounded-xl px-4 py-2 text-xs shadow-sm hover:shadow transition-all cursor-pointer"
+              title="Download Clinical PDF Report"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span>Download PDF</span>
+            </button>
+            <button
+              onClick={handleExportCsv}
+              className="inline-flex items-center space-x-1.5 bg-white border border-[#E8ECF2] hover:bg-slate-50 text-slate-700 font-medium rounded-xl px-3 py-2 text-xs shadow-sm transition-all cursor-pointer"
+              title="Export as CSV spreadsheet"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400" />
+              <span className="hidden sm:inline">CSV</span>
+            </button>
+          </div>
         </div>
       </div>
 
