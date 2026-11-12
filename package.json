@@ -11,7 +11,8 @@
     "test:backend": "npm --prefix backend test",
     "build:frontend": "npm --prefix frontend run build",
     "migrate": "npm --prefix backend run migrate",
-    "seed": "npm --prefix backend run seed"
+    "seed": "npm --prefix backend run seed",
+    "clean:data": "npm --prefix backend run clean:data"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
