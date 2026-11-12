@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from './context/AuthContext';
+import {
+  LayoutDashboard,
+  FileText,
+  BarChart3,
+  Settings
+} from 'lucide-react';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -16,6 +22,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'readings' | 'reports' | 'settings'
   const [currentView, setCurrentView] = useState('main'); // 'main' | 'add' | 'edit'
   const [editingReading, setEditingReading] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (loading) {
     return (
@@ -66,15 +73,32 @@ export default function App() {
     );
   }
 
-  // Main Workspace with Sidebar & Header
+  const navItems = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'readings', label: 'Readings', icon: FileText },
+    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
+
+  // Main Workspace with Responsive Sidebar & Header
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Sidebar: Fixed on desktop, slide-over drawer on mobile */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+      />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <Header breadcrumbPath={activeTab} />
+        <Header
+          breadcrumbPath={activeTab}
+          onOpenSidebar={() => setMobileMenuOpen(true)}
+        />
 
-        <main className="flex-1 px-8 max-w-7xl w-full mx-auto">
+        {/* Content area: full 100% width on mobile, with bottom padding for mobile nav */}
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 max-w-7xl w-full mx-auto pb-24 md:pb-12">
           {activeTab === 'overview' && (
             <DashboardPage
               onAddReading={() => setCurrentView('add')}
@@ -97,29 +121,48 @@ export default function App() {
           )}
 
           {activeTab === 'settings' && (
-            <div className="bg-white rounded-3xl p-8 border border-[#E8ECF2] shadow-sm max-w-2xl">
-              <h2 className="text-xl font-bold text-slate-900 mb-1">Account & Preferences</h2>
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8ECF2] shadow-sm max-w-2xl">
+              <h2 className="text-xl font-bold text-slate-900 mb-1">Account &amp; Preferences</h2>
               <p className="text-xs text-slate-500 mb-6">Manage your profile and clinical parameters.</p>
 
               <div className="space-y-4 text-xs">
                 <div>
                   <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">Name</span>
-                  <div className="font-semibold text-slate-800">{user?.name}</div>
+                  <div className="font-semibold text-slate-800 text-sm">{user?.name}</div>
                 </div>
                 <div>
                   <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">Email</span>
-                  <div className="font-semibold text-slate-800">{user?.email}</div>
+                  <div className="font-semibold text-slate-800 text-sm break-all">{user?.email}</div>
                 </div>
                 <div>
                   <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">Target Range</span>
-                  <div className="font-semibold text-emerald-600">70 – 140 mg/dL (Normal Fasting & Post-meal)</div>
+                  <div className="font-semibold text-emerald-600">70 – 140 mg/dL (Normal Fasting &amp; Post-meal)</div>
                 </div>
               </div>
             </div>
           )}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation Bar: Quick 1-tap tab switching */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1.5 px-3 flex items-center justify-around z-30 shadow-lg">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center py-1 px-3 rounded-xl transition-all ${
+                isActive ? 'text-brand-600 font-bold' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Icon className={`w-5 h-5 ${isActive ? 'text-brand-500' : 'text-slate-400'}`} />
+              <span className="text-[10px] mt-0.5 tracking-tight">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
-
